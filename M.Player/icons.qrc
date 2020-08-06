@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>res/index.png</file>
+        <file>res/next.png</file>
+        <file>res/pause.png</file>
+        <file>res/play.png</file>
+        <file>res/prev.png</file>
+        <file>res/tray_index.png</file>
+        <file>res/tray_next.png</file>
+        <file>res/tray_pause.png</file>
+        <file>res/tray_play.png</file>
+        <file>res/tray_prev.png</file>
+    </qresource>
+</RCC>
