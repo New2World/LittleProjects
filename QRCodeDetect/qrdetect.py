@@ -2,50 +2,59 @@ import numpy as np
 import cv2
 
 def impreprocess(img, scale=0.5):
-    img = cv2.resize(img, dsize=None, fx=scale, fy=scale)
-    y = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2YUV))[0]
-    bim = cv2.adaptiveThreshold(cv2.medianBlur(y, 5), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 83, 2)
-    bim = cv2.morphologyEx(bim, cv2.MORPH_OPEN, (5,5))
-    return bim
+  if not scale == 1.0:
+    img = cv2.resize(img, dsize=None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+  y = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2YUV))[0]
+  bim = cv2.adaptiveThreshold(cv2.medianBlur(y, 5), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 83, 2)
+  bim = cv2.morphologyEx(bim, cv2.MORPH_OPEN, (7,7))
+  return bim
 
 def countHierarchy(x, hiera, dp):
+  x = hiera[x][2]
+  cnt = 1
+  cks = dp.keys()
+  while x >= 0:
+    if x in cks:
+      return cnt + dp[x]
+    cnt += 1
     x = hiera[x][2]
-    cnt = 1
-    cks = dp.keys()
-    while x >= 0:
-        if x in cks:
-            return cnt + dp[x]
-        cnt += 1
-        x = hiera[x][2]
-    return cnt
+  return cnt
 
 def isRectangle(contour, var=2):
-    S = cv2.contourArea(contour)
-    L = cv2.arcLength(contour, closed=True)
-    return abs(16-1.0*L**2/S) <= var
+  S = cv2.contourArea(contour)
+  L = cv2.arcLength(contour, closed=True)
+  return abs(16-1.0*L**2/S) <= var
+
+def cascadeRectangle(x, contour, hiera):
+  cnt = 0
+  while x >= 0:
+    if isRectangle(contour[x]):
+      cnt += 1
+    x = hiera[x][2]
+  return cnt == 3
 
 def getRotatedPoints(points, M):
-    return points @ M[:,:2].T + M[:,2]
+  return points @ M[:,:2].T + M[:,2]
 
 def calibrateAngle(points):
-    points = np.asarray(points)
-    upper, left = points.min(axis=0)
-    lower, right = points.max(axis=0)
-    mid = [(upper + lower) / 2, (left + right) / 2]
-    region = np.sum((points / mid).astype(np.int32), axis=0)
-    region_s = np.sum(region)
-    n = 0
-    if region_s == 4:
-        n = 2
-    elif region_s == 3:
-        if region[0] == 2:
-            n = 1
-        else:
-            n = 3
-    return n * 90.0
+  points = np.asarray(points)
+  upper, left = points.min(axis=0)
+  lower, right = points.max(axis=0)
+  mid = [(upper + lower) / 2, (left + right) / 2]
+  region = np.sum((points / mid).astype(np.int32), axis=0)
+  region_s = np.sum(region)
+  n = 0
+  if region_s == 4:
+    n = 2
+  elif region_s == 3:
+    if region[0] == 2:
+      n = 1
+    else:
+      n = 3
+  return n * 90.0
 
 
-rim = cv2.imread('qr2.jpg')
+rim = cv2.imread('qr.jpg')
 max_edge = np.max(rim.shape)
 imcent = tuple([x//2 for x in rim.shape[:2]])[::-1]
 bim = impreprocess(rim, 1.0)
@@ -55,11 +64,11 @@ contour, hierarchy = cv2.findContours(bim, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPL
 hiecnt = {}
 locinfo = []
 for i, h in enumerate(hierarchy[0]):
-    if i in hiecnt.keys():
-        continue
-    hiecnt[i] = countHierarchy(i, hierarchy[0], hiecnt)
-    if hiecnt[i] == 3 and isRectangle(contour[i]):
-        locinfo.append(cv2.minAreaRect(contour[i]))
+  if i in hiecnt.keys():
+    continue
+  hiecnt[i] = countHierarchy(i, hierarchy[0], hiecnt)
+  if hiecnt[i] >= 3 and cascadeRectangle(i, contour, hierarchy[0]):
+    locinfo.append(cv2.minAreaRect(contour[i]))
 
 rotangle = 90 - np.abs(np.mean([t[2] for t in locinfo]))
 rotmat = cv2.getRotationMatrix2D(imcent, rotangle, 1.0)
