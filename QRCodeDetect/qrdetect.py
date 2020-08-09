@@ -92,8 +92,8 @@ bor_img = np.stack([rotimg.copy()]*3, axis=2)
 bor_img = cv2.drawContours(bor_img, locbor, -1, (0,0,255), 3)
 
 while True:
-    cv2.imshow("Image", bor_img)
-    if cv2.waitKey(0) == 27:
-        break
+  cv2.imshow("Image", bor_img)
+  if cv2.waitKey(0) == 27:
+    break
 
 cv2.destroyAllWindows()
