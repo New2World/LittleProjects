@@ -48,7 +48,7 @@ bool SudokuSolver::solve(int (*board)[9]) {
             else {
                 digit = 1 << board[i][j];
                 if(!((rows[i] & digit) && (cols[j] & digit) && (blks[id=getid(i,j)] & digit))) {
-                    flag = false;   // duplicated
+                    flag = false;   // redundant
                     break;
                 }
                 rows[i] ^= digit, cols[j] ^= digit, blks[id] ^= digit;
